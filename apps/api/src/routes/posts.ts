@@ -1,159 +1,22 @@
 import express from 'express';
 import Post from '../models/Post';
-import { getCategory } from './categories';
+import { getCategory } from '../controllers/category';
+import postController from '../controllers/post';
 
 const router = express.Router();
 
-const posts: Post[] = [];
+router.get('/', postController.getPosts);
 
-export const getPost = (id: string) => {
-  return posts.find(p => p.id === id);
-}
+router.get('/category/:category', postController.getPostsByCategory);
 
-export const getPostIndex = (id: string) => {
-  return posts.findIndex(p => p.id === id);
-}
+router.get('/:id', postController.getPostsById);
 
-router.get('/', (req, res) => {
-  return res.status(200).json(posts);
-});
+router.post('/', postController.createPost);
 
-router.get('/category/:category', (req, res) => {
-  const { category } = req.params;
+router.post('/:id/comments', postController.createCommentInPost);
 
-  const categoryPosts = posts.filter(
-    (post) => post.category === category
-  );
+router.patch('/:id', postController.updatePost);
 
-  return res.status(200).json(categoryPosts);
-});
-
-router.get('/:id', (req, res) => {
-  const { id } = req.params;
-  const post = getPost(id);
-
-  if (!post) {
-    return res.status(404).json({ message: 'Post not found' });
-  }
-
-  const category = getCategory(post.category);
-
-  return res.status(200).json({
-    ...post,
-    category
-  });
-});
-
-router.post('/', (req, res) => {
-  const { title, image, description, category } = req.body;
-
-  const fields = {
-    title,
-    image,
-    description,
-    category
-  };
-
-  for (const [fieldName, value] of Object.entries(fields)) {
-    if (!value) {
-      return res.status(400).json({
-        message: `${fieldName} is required`
-      });
-    }
-  }
-
-  const newPost = {
-    id: Date.now().toString(),
-    title,
-    image,
-    description,
-    category,
-    comments: []
-  }
-
-  posts.push(newPost);
-
-  return res.status(201).json(newPost);
-});
-
-router.post('/:id/comments', (req, res) => {
-  const { id } = req.params;
-  const { author, content } = req.body;
-
-  const post = getPost(id);
-
-  if (!post) {
-    return res.status(404).json({ message: 'Post not found' });
-  }
-
-  const fields = {
-    author,
-    content
-  };
-
-  for (const [fieldName, value] of Object.entries(fields)) {
-    if (!value) {
-      return res.status(400).json({
-        message: `${fieldName} is required`
-      });
-    }
-  }
-
-  const newComment = {
-    id: Date.now().toString(),
-    author,
-    content
-  };
-
-  post.comments.push(newComment);
-
-
-  return res.status(201).json(newComment);
-});
-
-router.patch('/:id', (req, res) => {
-  const { id } = req.params;
-  const postIndex = getPostIndex(id);
-
-  if (postIndex === -1) {
-    return res.status(404).json({ message: 'Post not found' });
-  }
-
-  const updatedPost = { ...posts[postIndex] };
-
-  const allowedFields = [
-    'title',
-    'image',
-    'description',
-    'category',
-    'comments',
-  ] as const;
-
-  allowedFields.forEach((field) => {
-    if (req.body[field] !== undefined) {
-      updatedPost[field] = req.body[field];
-    }
-  });
-
-  posts[postIndex] = updatedPost;
-
-  return res.status(200).json(updatedPost);
-});
-
-router.delete('/:id', (req, res) => {
-  const { id } = req.params;
-
-  const postIndex = getPostIndex(id);
-
-  if (postIndex === -1) {
-    return res.status(404).json({ message: 'Post not found' });
-  }
-
-  const post = getPost(id);
-
-  posts.splice(postIndex, 1);
-
-  return res.status(200).json(post);
-});
+router.delete('/:id', postController.deletePost);
 
 export default router;
